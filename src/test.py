@@ -16,6 +16,11 @@ tests = {
         "test_add0",
         "test_add1",
         "test_add2"
+    ],
+    "ECCTest": [
+        "test_on_curve",
+        "test_add",
+        "test_rmul"
     ]
 }
 
