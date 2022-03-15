@@ -1,9 +1,10 @@
 
 import helper
 import ecc
+import s256Ecc
 
 
-tests = {
+eccTests = {
     "FieldElementTest": [
         "test_ne",
         "test_add",
@@ -24,10 +25,30 @@ tests = {
     ]
 }
 
-for testTarget, testcases in tests.items():
+for testTarget, testcases in eccTests.items():
     print("\n🤓🤓🤓🤓🤓🤓🤓🤓🤓🤓🤓\n")
     print("Start Test: " + testTarget)
     print("\n🤓🤓🤓🤓🤓🤓🤓🤓🤓🤓🤓\n\n")
     for testcase in testcases:
         print("😄" + testcase)
         helper.run(getattr(ecc, testTarget)(testcase))
+
+s256EccTests = {
+    "S256Test": [
+        "test_order",
+        "test_pubpoint",
+        "test_verify"
+    ],
+    "PrivateKeyTest": [
+        "test_sign"
+    ]
+}
+
+
+for testTarget, testcases in s256EccTests.items():
+    print("\n🤓🤓🤓🤓🤓🤓🤓🤓🤓🤓🤓\n")
+    print("Start Test: " + testTarget)
+    print("\n🤓🤓🤓🤓🤓🤓🤓🤓🤓🤓🤓\n\n")
+    for testcase in testcases:
+        print("😄" + testcase)
+        helper.run(getattr(s256Ecc, testTarget)(testcase))

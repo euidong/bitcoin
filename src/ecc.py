@@ -152,23 +152,24 @@ class Point:
         y3 = s * (self.x - x3) - self.y
         return self.__class__(x3, y3, self.a, self.b)
 
-    def __rmul__(self, coefficient: int) -> 'Point':
-        result = self.__class__(self.x, self.y, self.a, self.b)
-        for _ in range(1, coefficient):
-            result += self
-        return result
-    # * If you wanna get More Good Performance, use Bellow
     # def __rmul__(self, coefficient: int) -> 'Point':
-        # coef = coefficient
-        # current = self
-        # result = self.__class__(None, None, self.a, self.b)
+    #     result = self.__class__(None, None, self.a, self.b)
+    #     for _ in range(0, coefficient):
+    #         result += self
+    #     return result
+    # * If you wanna get More Good Performance, use Bellow
 
-        # while coef:
-        #     if coef & 1:
-        #         result += current
-        #     current += current
-        #     coef >>= 1
-        # return result
+    def __rmul__(self, coefficient: int) -> 'Point':
+        coef = coefficient
+        current = self
+        result = self.__class__(None, None, self.a, self.b)
+
+        while coef:
+            if coef & 1:
+                result += current
+            current += current
+            coef >>= 1
+        return result
 
 
 class PointTest(TestCase):
