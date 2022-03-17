@@ -1,8 +1,11 @@
+# BitCoin use secp256k1 and group order which was fixed.
+# So, We will call BitCoin's ecdsa 's256 ecc'
+
 import hashlib
 import hmac
 from pickletools import bytes8
 from random import randint
-import ecc
+from . import ecc
 from unittest import TestCase
 
 

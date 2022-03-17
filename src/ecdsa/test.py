@@ -1,8 +1,6 @@
-
-import helper
-import ecc
-import s256Ecc
-
+from .. import helper
+from . import ecc
+from . import s256Ecc
 
 eccTests = {
     "FieldElementTest": [

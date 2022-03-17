@@ -5,10 +5,11 @@
   "version": "0.2.0",
   "configurations": [
     {
+      // python -m src.ecdsa.test
       "name": "Python: ECDSA Test",
       "type": "python",
       "request": "launch",
-      "program": "src/ecdsa/test.py"
+      "module": "src.ecdsa.test"
     },
     {
       "name": "Python: Current File",
