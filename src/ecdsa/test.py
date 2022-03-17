@@ -1,4 +1,4 @@
-from .. import helper
+from ..helper import helper
 from . import ecc
 from . import s256Ecc
 
@@ -35,10 +35,16 @@ s256EccTests = {
     "S256Test": [
         "test_order",
         "test_pubpoint",
-        "test_verify"
+        "test_verify",
+        "test_sec",
+        "test_address"
+    ],
+    "SignatureTest": [
+        "test_der"
     ],
     "PrivateKeyTest": [
-        "test_sign"
+        "test_sign",
+        "test_wif"
     ]
 }
 

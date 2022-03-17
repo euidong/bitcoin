@@ -1,8 +1,9 @@
+from typing import Union
 from unittest import TestCase
 
 
 class FieldElement:
-    def __init__(self, num, prime):
+    def __init__(self, num: int, prime: int):
         if num >= prime or num < 0:
             err = 'Num {} not in field range 0 to {}'.format(num, prime - 1)
             raise ValueError(err)
@@ -58,7 +59,6 @@ class FieldElement:
 
 
 class FieldElementTest(TestCase):
-
     def test_ne(self):
         a = FieldElement(2, 31)
         b = FieldElement(2, 31)
@@ -107,7 +107,7 @@ class FieldElementTest(TestCase):
 
 
 class Point:
-    def __init__(self, x, y, a, b):
+    def __init__(self, x: Union['FieldElement', int], y: Union['FieldElement', int], a: int, b: int):
         self.a = a
         self.b = b
         self.x = x
@@ -152,13 +152,16 @@ class Point:
         y3 = s * (self.x - x3) - self.y
         return self.__class__(x3, y3, self.a, self.b)
 
+    # * (for __rmul__)
+    # * It's very intuitive implementation.
     # def __rmul__(self, coefficient: int) -> 'Point':
     #     result = self.__class__(None, None, self.a, self.b)
     #     for _ in range(0, coefficient):
     #         result += self
     #     return result
-    # * If you wanna get More Good Performance, use Bellow
 
+    # * (for __rmul__)
+    # * If you wanna get More Good Performance, use Bellow
     def __rmul__(self, coefficient: int) -> 'Point':
         coef = coefficient
         current = self

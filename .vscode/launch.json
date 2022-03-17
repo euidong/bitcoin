@@ -12,6 +12,13 @@
       "module": "src.ecdsa.test"
     },
     {
+      // python -m src.helper.test
+      "name": "Python: Helper Test",
+      "type": "python",
+      "request": "launch",
+      "module": "src.helper.test"
+    },
+    {
       "name": "Python: Current File",
       "type": "python",
       "request": "launch",
