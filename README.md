@@ -15,6 +15,23 @@ $ conda create --name bitcoin --file environment.yml
 
 You can check other vscode run script in .vscode/launch.json
 
+
+And you can set testing view with .vscode/settings.json, bellow one is my example
+```
+{
+  "python.defaultInterpreterPath": "~/opt/anaconda3/envs/bitcoin/bin/python",
+  "python.testing.unittestArgs": [
+    "-v",
+    "-s",
+    "./src",
+    "-p",
+    "*_test.py"
+  ],
+  "python.testing.unittestEnabled": true,
+  "python.testing.pytestEnabled": false,
+}
+```
+
 ---
 
 ### Reference 

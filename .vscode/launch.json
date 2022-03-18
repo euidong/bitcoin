@@ -5,25 +5,21 @@
   "version": "0.2.0",
   "configurations": [
     {
-      // python -m src.ecdsa.test
-      "name": "Python: ECDSA Test",
+      // test all
+      "name": "Test All",
       "type": "python",
       "request": "launch",
-      "module": "src.ecdsa.test"
-    },
-    {
-      // python -m src.helper.test
-      "name": "Python: Helper Test",
-      "type": "python",
-      "request": "launch",
-      "module": "src.helper.test"
-    },
-    {
-      "name": "Python: Current File",
-      "type": "python",
-      "request": "launch",
-      "program": "${file}",
-      "console": "integratedTerminal"
+      "args": [
+        "discover",
+        "-s",
+        "./src",
+        "-p",
+        "*_test.py"
+      ],
+      "module": "unittest",
+      // ! vs-code error : integratedTerminal is not working well.
+      // so, you can see the debug result in "DEBUG CONSOLE" Tab.
+      "console": "internalConsole" 
     }
   ]
 }

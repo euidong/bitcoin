@@ -1,5 +1,6 @@
 import hashlib
 from unittest import TestCase, TestSuite, TextTestRunner
+from io import BytesIO
 
 BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
@@ -66,19 +67,28 @@ def int_to_little_endian(n: int, length: int) -> bytes:
     return int.to_bytes(n, length, 'little')
 
 
-class HelperTest(TestCase):
-    def test_little_endian_to_int(self):
-        h = bytes.fromhex('99c3980000000000')
-        want = 10011545
-        self.assertEqual(little_endian_to_int(h), want)
-        h = bytes.fromhex('a135ef0100000000')
-        want = 32454049
-        self.assertEqual(little_endian_to_int(h), want)
+def read_variant(s: BytesIO) -> int:
+    '''return integer from bytes stream'''
+    i = s.read(1)[0]
+    if i < 0xfd:
+        return i
+    elif i == 0xfd:
+        i = s.read(2)
+    elif i == 0xfe:
+        i = s.read(4)
+    elif i == 0xff:
+        i = s.read(8)
+    return little_endian_to_int(i)
 
-    def test_int_to_little_endian(self):
-        n = 1
-        want = b'\x01\x00\x00\x00'
-        self.assertEqual(int_to_little_endian(n, 4), want)
-        n = 10011545
-        want = b'\x99\xc3\x98\x00\x00\x00\x00\x00'
-        self.assertEqual(int_to_little_endian(n, 8), want)
+
+def encode_variant(i: int) -> bytes:
+    '''encodes a integer as a variant(bytes)'''
+    if i < 0xfd:  # 2^8 - 3
+        return bytes([i])
+    if i < 0x10000:  # 2^16 - 1
+        return b'\xfd' + int_to_little_endian(i, 2)
+    if i < 0x100000000:  # 2^32 - 1
+        return b'\xfe' + int_to_little_endian(i, 4)
+    if i < 0x10000000000000000:  # 2^64 - 1
+        return b'\xff' + int_to_little_endian(i, 8)
+    raise ValueError('Too big to send {}'.format(i))
