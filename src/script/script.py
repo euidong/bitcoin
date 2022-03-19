@@ -102,4 +102,38 @@ class Script:
         return encode_variant(total) + result
 
     def evaluate(self, z):
-        raise NotImplementedError
+        cmds = self.cmds[:]
+        stack = []
+        altstack = []
+        while len(cmds) > 0:
+            cmd = cmds.pop()
+            # if cmd type is integer, it is op.
+            if type(cmd) == int:
+                # operation is function.
+                # OP_CODE_FUNCTIONS = Dict[int, function]
+                operation = OP_CODE_FUNCTIONS[cmd]
+                # this branch is to set parameter for operation
+                if cmd in (99, 100):
+                    if not operation(stack, cmds):
+                        LOGGER.info('bad op: {}'.format(OP_CODE_NAMES[cmd]))
+                        return False
+                elif cmd in (107, 108):
+                    if not operation(stack, altstack):
+                        LOGGER.info('bad op: {}'.format(OP_CODE_NAMES[cmd]))
+                        return False
+                elif cmd in (172, 173, 174, 175):
+                    if not operation(stack, z):
+                        LOGGER.info('bad op: {}'.format(OP_CODE_NAMES[cmd]))
+                        return False
+                else:
+                    if not operation(stack):
+                        LOGGER.info('bad op: {}'.format(OP_CODE_NAMES[cmd]))
+                        return False
+            # if cmd is bytes, it is element.
+            else:
+                stack.append(cmd)
+        if len(stack) == 0:
+            return False
+        if stack.pop() == b'':
+            return False
+        return True

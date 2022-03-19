@@ -1,7 +1,7 @@
 # copied from https://github.com/jimmysong/programmingbitcoin/blob/master/code-ch05/op.py
 
 import hashlib
-
+from src.ecdsa.s256Ecc import S256Point, Signature
 from ..helper.helper import (
     hash160,
     hash256,
@@ -631,7 +631,11 @@ def op_sha256(stack):
 
 
 def op_hash160(stack):
-    raise NotImplementedError
+    if len(stack) < 1:
+        return False
+    element = stack.pop()
+    stack.append(hash160(element))
+    return True
 
 
 def op_hash256(stack):
@@ -643,7 +647,16 @@ def op_hash256(stack):
 
 
 def op_checksig(stack, z):
-    raise NotImplementedError
+    if len(stack) < 2:
+        return False
+    pub_key = S256Point.parse_sec(stack.pop())
+    sig = Signature.parse_der(stack.pop())
+    ok = pub_key.verify(z, sig)
+    if ok:
+        stack.append(encode_num(1))
+    else:
+        stack.append(encode_num(0))
+    return ok
 
 
 def op_checksigverify(stack, z):
