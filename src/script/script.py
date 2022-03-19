@@ -1,7 +1,8 @@
 from io import BytesIO
 from locale import currency
 from logging import getLogger
-from typing import Union
+from typing import List, Union
+from xmlrpc.client import boolean
 from helper.helper import (
     encode_variant, int_to_little_endian, read_variant, little_endian_to_int)
 from src.script.op import (OP_CODE_FUNCTIONS, OP_CODE_NAMES)
@@ -9,8 +10,16 @@ from src.script.op import (OP_CODE_FUNCTIONS, OP_CODE_NAMES)
 LOGGER = getLogger(__name__)
 
 
+def p2pkh_script(h160: bytes) -> 'Script':
+    '''
+    Takes a hash160 and returns the p2pkh ScriptPubkey
+    (OP_DUP | OP_HASH160 | h160 | OP_EQUALVERIFY | OP_CHECKSIG)
+    '''
+    return Script([0x76, 0xa9, h160, 0x88, 0xac])
+
+
 class Script:
-    def __init__(self, cmds: Union[int, bytes] = None):
+    def __init__(self, cmds: List[Union[int, bytes]] = None):
         if cmds is None:
             self.cmds = []
         else:
@@ -29,8 +38,11 @@ class Script:
                 result.append(cmd.hex())
         return ' '.join(result)
 
+    def __add__(self, other: 'Script') -> 'Script':
+        return Script(self.cmds + other.cmds)
+
     @classmethod
-    def parse(cls, s: BytesIO):
+    def parse(cls, s: BytesIO) -> 'Script':
         # get the length of the entire field
         length = read_variant(s)
         # initialize the cmds array
@@ -70,7 +82,7 @@ class Script:
             raise SyntaxError('parsing script failed')
         return cls(cmds)
 
-    def raw_serialize(self):
+    def raw_serialize(self) -> bytes:
         # initialize what we'll send back
         result = b''
         # go through each cmd
@@ -95,18 +107,18 @@ class Script:
                 result += cmd
         return result
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         # get the raw serialization (no prepended length)
         result = self.raw_serialize()
         total = len(result)
         return encode_variant(total) + result
 
-    def evaluate(self, z):
+    def evaluate(self, z) -> bool:
         cmds = self.cmds[:]
         stack = []
         altstack = []
         while len(cmds) > 0:
-            cmd = cmds.pop()
+            cmd = cmds.pop(0)
             # if cmd type is integer, it is op.
             if type(cmd) == int:
                 # operation is function.

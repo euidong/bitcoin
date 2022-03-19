@@ -4,9 +4,92 @@ import json
 from multiprocessing.sharedctypes import Value
 from typing import Dict, List
 import requests
+from ecdsa.s256Ecc import PrivateKey, Signature
 
-from src.helper.helper import encode_variant, hash256, int_to_little_endian, little_endian_to_int, read_variant
+from src.helper.helper import SIGHASH_ALL, encode_variant, hash256, int_to_little_endian, little_endian_to_int, read_variant
 from src.script.script import Script
+
+
+class TxIn:
+    '''
+    prev_tx : previous transaction's hased serialization.
+    prev_index: previous transaction's output index.
+    '''
+
+    def __init__(self, prev_tx: bytes, prev_index: int, script_sig: Script = None, sequence: int = 0xffffffff):
+        self.prev_tx = prev_tx
+        self.prev_index = prev_index
+        if script_sig is None:
+            self.script_sig = Script()
+        else:
+            self.script_sig = script_sig
+        self.sequence = sequence
+
+    def __repr__(self):
+        return '{}:{}'.format(
+            self.prev_tx.hex(),
+            self.prev_index
+        )
+
+    @classmethod
+    def parse(cls, s: BytesIO) -> 'TxIn':
+        prev_tx = s.read(32)[::-1]
+        prev_index = little_endian_to_int(s.read(4))
+        script_sig = Script.parse(s)
+        sequence = little_endian_to_int(s.read(4))
+        return cls(prev_tx, prev_index, script_sig, sequence)
+
+    def serialize(self) -> bytes:
+        result = self.prev_tx[::-1]  # reverse previous transaction bytes
+        result += int_to_little_endian(self.prev_index, 4)
+        result += self.script_sig.serialize()
+        result += int_to_little_endian(self.sequence, 4)
+        return result
+
+    def fetch_tx(self, testnet=False) -> 'Tx':
+        return TxFetcher.fetch(self.prev_tx.hex(), testnet=testnet)
+
+    def value(self, testnet=False) -> int:
+        '''
+        Get the output value by looking up the tx hash.
+        Returns the amount in satoshi
+        '''
+        tx = self.fetch_tx(testnet=testnet)
+        return tx.tx_outs[self.prev_index].amount
+
+    def script_pubkey(self, testnet=False) -> Script:
+        '''
+        Get the ScriptPubKey by looking up the tx hash.
+        Returns a script object
+        '''
+        tx = self.fetch_tx(testnet=testnet)
+        return tx.tx_outs[self.prev_index].script_pubkey
+
+
+class TxOut:
+    '''
+    amount is 8bytes. The unit of this is satoshi.(1 satoshi = 10^-8 bitcoin)
+    So, maximum amount is 21 million bitcoins.
+    '''
+
+    def __init__(self, amount: int, script_pubkey: Script):
+        self.amount = amount
+        self.script_pubkey = script_pubkey
+
+    def __repr__(self):
+        return '{}:{}'.format(self.amount, self.script_pubkey)
+
+    @classmethod
+    def parse(cls, s: BytesIO) -> 'TxOut':
+        amount = little_endian_to_int(s.read(8))
+        script_key = Script.parse(s)
+        return cls(amount, script_key)
+
+    def serialize(self) -> bytes:
+        '''Return the bytes serialization of the transaction outpute'''
+        result = int_to_little_endian(self.amount, 8)
+        result += self.script_pubkey.serialize()
+        return result
 
 
 class Tx:
@@ -66,7 +149,7 @@ class Tx:
         locktime = little_endian_to_int(s.read(4))
         return cls(version=version, tx_ins=tx_ins, tx_outs=tx_outs, locktime=locktime)
 
-    def serialize(self):
+    def serialize(self) -> bytes:
         '''Returns the byte serialization of the transaction'''
         result = int_to_little_endian(self.version, 4)
         result += encode_variant(len(self.tx_ins))
@@ -78,7 +161,7 @@ class Tx:
         result += int_to_little_endian(self.locktime, 4)
         return result
 
-    def fee(self):
+    def fee(self) -> int:
         '''Returns the fee of this transaction in satoshi'''
         # get all inputs tx
         in_amount = 0
@@ -92,87 +175,92 @@ class Tx:
                 "Input amount is lower than Output amount, It'll make a new bitcoin.")
         return in_amount - out_amount
 
-
-class TxIn:
-    '''
-    prev_tx : previous transaction's hased serialization.
-    prev_index: previous transaction's output index.
-    '''
-
-    def __init__(self, prev_tx: bytes, prev_index: int, script_sig: Script = None, sequence: int = 0xffffffff):
-        self.prev_tx = prev_tx
-        self.prev_index = prev_index
-        if script_sig is None:
-            self.script_sig = Script()
-        else:
-            self.script_sig = script_sig
-        self.sequence = sequence
-
-    def __repr__(self):
-        return '{}:{}'.format(
-            self.prev_tx.hex(),
-            self.prev_index
-        )
-
-    @classmethod
-    def parse(cls, s: BytesIO) -> 'TxIn':
-        prev_tx = s.read(32)[::-1]
-        prev_index = little_endian_to_int(s.read(4))
-        script_sig = Script.parse(s)
-        sequence = little_endian_to_int(s.read(4))
-        return cls(prev_tx, prev_index, script_sig, sequence)
-
-    def serialize(self) -> bytes:
-        result = self.prev_tx[::-1]  # reverse previous transaction bytes
-        result += int_to_little_endian(self.prev_index, 4)
-        result += self.script_sig.serialize()
-        result += int_to_little_endian(self.sequence, 4)
-        return result
-
-    def fetch_tx(self, testnet=False) -> Tx:
-        return TxFetcher.fetch(self.prev_tx.hex(), testnet=testnet)
-
-    def value(self, testnet=False) -> int:
+    def sig_hash(self, input_index: int) -> int:
         '''
-        Get the output value by looking up the tx hash.
-        Returns the amount in satoshi
+        Returns the integer representation of the hash that needs to get
+        signed for index input_index
         '''
-        tx = self.fetch_tx(testnet=testnet)
-        return tx.tx_outs[self.prev_index].amount
+        # start the serialization with version
+        # use int_to_little_endian in 4 bytes
+        result = int_to_little_endian(self.version, 4)
 
-    def script_pubkey(self, testnet=False) -> Script:
-        '''
-        Get the ScriptPubKey by looking up the tx hash.
-        Returns a script object
-        '''
-        tx = self.fetch_tx(testnet=testnet)
-        return tx.tx_outs[self.prev_index].script_pubkey
+        # add how many inputs there are using encode_varint
+        result += encode_variant(len(self.tx_ins))
 
+        # loop through each input using enumerate, so we have the input index
+        # if the input index is the one we're signing
+        # the previous tx's ScriptPubkey is the ScriptSig
+        # Otherwise, the ScriptSig is empty
+        # add the serialization of the input with the ScriptSig we want
+        for idx, tx_in in enumerate(self.tx_ins):
+            if idx == input_index:
+                result += TxIn(
+                    prev_tx=tx_in.prev_tx,
+                    prev_index=tx_in.prev_index,
+                    script_sig=tx_in.script_pubkey(self.testnet),
+                    sequence=tx_in.sequence,
+                ).serialize()
+            else:
+                result += TxIn(
+                    prev_tx=tx_in.prev_tx,
+                    prev_index=tx_in.prev_index,
+                    sequence=tx_in.sequence,
+                ).serialize()
+        # add how many outputs there are using encode_varint
+        result += encode_variant(len(self.tx_outs))
+        # add the serialization of each output
+        for tx_out in self.tx_outs:
+            result += tx_out.serialize()
+        # add the locktime using int_to_little_endian in 4 bytes
+        result += int_to_little_endian(self.locktime, 4)
+        # add SIGHASH_ALL using int_to_little_endian in 4 bytes
+        result += int_to_little_endian(SIGHASH_ALL, 4)
+        # hash256 the serialization
+        z = hash256(result)
+        # convert the result to an integer using int.from_bytes(x, 'big')
+        return int.from_bytes(z, 'big')
 
-class TxOut:
-    '''
-    amount is 8bytes. The unit of this is satoshi.(1 satoshi = 10^-8 bitcoin)
-    So, maximum amount is 21 million bitcoins.
-    '''
+    def verify_input(self, input_index: int) -> bool:
+        '''Returns whether the input has a valid signature'''
+        # get the relevant input
+        tx_in = self.tx_ins[input_index]
+        # grab the previous ScriptPubKey
+        script_pubkey = tx_in.script_pubkey(self.testnet)
+        # get the signature hash (z)
+        z = self.sig_hash(input_index)
+        # combine the current ScriptSig and the previous ScriptPubKey
+        script = tx_in.script_sig + script_pubkey
+        # evaluate the combined script
+        return script.evaluate(z)
 
-    def __init__(self, amount: int, script_pubkey: Script):
-        self.amount = amount
-        self.script_pubkey = script_pubkey
+    def verify(self) -> bool:
+        '''Verify this transaction'''
+        # 1. check unspent (query UTXO)
 
-    def __repr__(self):
-        return '{}:{}'.format(self.amount, self.script_pubkey)
+        # 2. check fee
+        if self.fee() < 0:
+            return False
+        # 3. check validation of input.
+        for idx in range(len(self.tx_ins)):
+            if not self.verify_input(idx):
+                return False
+        return True
 
-    @classmethod
-    def parse(cls, s: BytesIO) -> 'TxOut':
-        amount = little_endian_to_int(s.read(8))
-        script_key = Script.parse(s)
-        return cls(amount, script_key)
-
-    def serialize(self) -> bytes:
-        '''Return the bytes serialization of the transaction outpute'''
-        result = int_to_little_endian(self.amount, 8)
-        result += self.script_pubkey.serialize()
-        return result
+    def sign_input(self, input_index: int, private_key: PrivateKey) -> Signature:
+        # get the signature hash (z)
+        z = self.sig_hash(input_index)
+        # get der signature of z from private key
+        der = private_key.sign(z).serialize_der()
+        # append the SIGHASH_ALL to der (use SIGHASH_ALL.to_bytes(1, 'big'))
+        sig = der + SIGHASH_ALL.to_bytes(1, 'big')
+        # calculate the sec
+        sec = private_key.point.serialize_sec()
+        # initialize a new script with [sig, sec] as the cmds
+        script = Script([sig, sec])
+        # change input's script_sig to new script
+        self.tx_ins[input_index].script_sig = script
+        # return whether sig is valid using self.verify_input
+        return self.verify_input(input_index)
 
 
 class TxFetcher:

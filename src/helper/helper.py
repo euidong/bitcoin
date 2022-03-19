@@ -2,6 +2,9 @@ import hashlib
 from unittest import TestCase, TestSuite, TextTestRunner
 from io import BytesIO
 
+SIGHASH_ALL = 1
+SIGHASH_NONE = 2
+SIGHASH_SINGLE = 3
 BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 
@@ -53,8 +56,14 @@ def decode_base58(s: bytes) -> bytes:
         num += BASE58_ALPHABET.index(c)
     # because, address is 25bytes
     # prefix(testnet or not,  1bytes) + hash160(20bytes) + checksum(4bytes)
+    # now, this function looks like decode_address.
     # TODO: now, decode base 58 is fixed 25 bytes.
     combined = num.to_bytes(25, 'big')
+    checksum = combined[-4:]
+    if hash256(combined[:-4])[:4] != checksum:
+        raise ValueError('bad address:{} {}'.format(
+            checksum, hash256(combined[:-4])[:4]))
+    return combined[1:-4]
 
 
 def little_endian_to_int(b: bytes) -> int:

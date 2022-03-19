@@ -8,7 +8,7 @@ from ..helper.helper import (
 )
 
 
-def encode_num(num):
+def encode_num(num) -> bytes:
     if num == 0:
         return b''
     abs_num = abs(num)
@@ -30,7 +30,7 @@ def encode_num(num):
     return bytes(result)
 
 
-def decode_num(element):
+def decode_num(element) -> int:
     if element == b'':
         return 0
     # reverse for big endian
@@ -650,7 +650,7 @@ def op_checksig(stack, z):
     if len(stack) < 2:
         return False
     pub_key = S256Point.parse_sec(stack.pop())
-    sig = Signature.parse_der(stack.pop())
+    sig = Signature.parse_der(stack.pop()[:-1])
     ok = pub_key.verify(z, sig)
     if ok:
         stack.append(encode_num(1))
