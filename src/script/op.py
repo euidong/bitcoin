@@ -1,6 +1,7 @@
 # copied from https://github.com/jimmysong/programmingbitcoin/blob/master/code-ch05/op.py
 
 import hashlib
+from typing import List
 from src.ecdsa.s256Ecc import S256Point, Signature
 from ..helper.helper import (
     hash160,
@@ -664,7 +665,43 @@ def op_checksigverify(stack, z):
 
 
 def op_checkmultisig(stack, z):
-    raise NotImplementedError
+    if len(stack) < 1:
+        return False
+    n = decode_num(stack.pop())
+    if len(stack) < n + 1:
+        return False
+    sec_pubkeys = []
+    for _ in range(n):
+        sec_pubkeys.append(stack.pop())
+    m = decode_num(stack.pop())
+    if len(stack) < m + 1:
+        return False
+    der_signatures = []
+    for _ in range(m):
+        der_signatures.append(stack.pop()[:-1])
+    stack.pop()
+    try:
+        # parse all the points
+        pubkeys = [S256Point.parse_sec(sec) for sec in sec_pubkeys]
+        # parse all the signatures
+        signatures = [Signature.parse_der(der) for der in der_signatures]
+        # loop through the signatures
+        for signature in signatures:
+            # if we have no more points, signatures are no good
+            if len(pubkeys) == 0:
+                return False
+            # we loop until we find the point which works with this signature
+            while pubkeys:
+                # get the current point from the list of points
+                pubkey = pubkeys.pop(0)
+                # we check if this signature goes with the current point
+                if pubkey.verify(z, signature):
+                    break
+        # the signatures are valid, so push a 1 to the stack
+        stack.append(encode_num(1))
+    except (ValueError, SyntaxError):
+        return False
+    return True
 
 
 def op_checkmultisigverify(stack, z):

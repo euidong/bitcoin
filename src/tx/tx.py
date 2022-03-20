@@ -175,7 +175,7 @@ class Tx:
                 "Input amount is lower than Output amount, It'll make a new bitcoin.")
         return in_amount - out_amount
 
-    def sig_hash(self, input_index: int) -> int:
+    def sig_hash(self, input_index: int, redeem_script=None) -> int:
         '''
         Returns the integer representation of the hash that needs to get
         signed for index input_index
@@ -189,23 +189,23 @@ class Tx:
 
         # loop through each input using enumerate, so we have the input index
         # if the input index is the one we're signing
-        # the previous tx's ScriptPubkey is the ScriptSig
+        # the previous tx's ScriptPubkey is the ScriptSig or Redeem_script
         # Otherwise, the ScriptSig is empty
         # add the serialization of the input with the ScriptSig we want
         for idx, tx_in in enumerate(self.tx_ins):
             if idx == input_index:
-                result += TxIn(
-                    prev_tx=tx_in.prev_tx,
-                    prev_index=tx_in.prev_index,
-                    script_sig=tx_in.script_pubkey(self.testnet),
-                    sequence=tx_in.sequence,
-                ).serialize()
+                if redeem_script:
+                    script_sig = redeem_script
+                else:
+                    script_sig = tx_in.script_pubkey(self.testnet)
             else:
-                result += TxIn(
-                    prev_tx=tx_in.prev_tx,
-                    prev_index=tx_in.prev_index,
-                    sequence=tx_in.sequence,
-                ).serialize()
+                script_sig = None
+            result += TxIn(
+                prev_tx=tx_in.prev_tx,
+                prev_index=tx_in.prev_index,
+                script_sig=script_sig,
+                sequence=tx_in.sequence,
+            ).serialize()
         # add how many outputs there are using encode_varint
         result += encode_variant(len(self.tx_outs))
         # add the serialization of each output
@@ -226,8 +226,14 @@ class Tx:
         tx_in = self.tx_ins[input_index]
         # grab the previous ScriptPubKey
         script_pubkey = tx_in.script_pubkey(self.testnet)
+        if script_pubkey.is_p2sh_script_pubkey():
+            cmd = tx_in.script_sig.cmds[-1]
+            raw_redeem = encode_variant(len(cmd)) + cmd
+            redeem_script = Script.parse(BytesIO(raw_redeem))
+        else:
+            redeem_script = None
         # get the signature hash (z)
-        z = self.sig_hash(input_index)
+        z = self.sig_hash(input_index, redeem_script)
         # combine the current ScriptSig and the previous ScriptPubKey
         script = tx_in.script_sig + script_pubkey
         # evaluate the combined script
