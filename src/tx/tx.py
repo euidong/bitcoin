@@ -4,7 +4,7 @@ import json
 from multiprocessing.sharedctypes import Value
 from typing import Dict, List
 import requests
-from ecdsa.s256Ecc import PrivateKey, Signature
+from ecdsa.s256Ecc import B, PrivateKey, Signature
 
 from src.helper.helper import SIGHASH_ALL, encode_variant, hash256, int_to_little_endian, little_endian_to_int, read_variant
 from src.script.script import Script
@@ -267,6 +267,24 @@ class Tx:
         self.tx_ins[input_index].script_sig = script
         # return whether sig is valid using self.verify_input
         return self.verify_input(input_index)
+
+    def is_coinbase(self) -> bool:
+        if len(self.tx_ins) != 1:
+            return False
+        if self.tx_ins[0].prev_tx != int.to_bytes(0, 32, 'little'):
+            return False
+        if self.tx_ins[0].prev_index != 0xffffffff:
+            return False
+        return True
+
+    def coinbase_height(self) -> int:
+        '''
+        Returns the height of the block this coinbase transaction is in 
+        Returns None if this transaction is not a coinbase transaction
+        '''
+        if not self.is_coinbase():
+            return None
+        return little_endian_to_int(self.tx_ins[0].script_sig.cmds[0])
 
 
 class TxFetcher:

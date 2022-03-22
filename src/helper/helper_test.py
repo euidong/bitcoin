@@ -6,7 +6,8 @@ from src.helper.helper import (
     h160_to_p2sh_address,
     little_endian_to_int,
     int_to_little_endian,
-    read_variant
+    read_variant,
+    calculate_new_bits
 )
 
 
@@ -49,3 +50,10 @@ class HelperTest(TestCase):
         self.assertEqual(h160_to_p2sh_address(h160, testnet=False), want)
         want = '2N3u1R6uwQfuobCqbCgBkpsgBxvr1tZpe7B'
         self.assertEqual(h160_to_p2sh_address(h160, testnet=True), want)
+
+    def test_calculate_new_bits(self):
+        prev_bits = bytes.fromhex('54d80118')
+        time_differential = 302400
+        want = bytes.fromhex('00157617')
+        self.assertEqual(calculate_new_bits(
+            prev_bits, time_differential), want)

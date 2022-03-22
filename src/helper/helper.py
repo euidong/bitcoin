@@ -6,6 +6,7 @@ SIGHASH_ALL = 1
 SIGHASH_NONE = 2
 SIGHASH_SINGLE = 3
 BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+TWO_WEEKS = 60 * 60 * 24 * 14
 
 
 def run(test):
@@ -127,3 +128,34 @@ def h160_to_p2sh_address(h160: bytes, testnet=False) -> str:
     else:
         prefix = b'\x05'
     return encode_base58_checksum(prefix + h160)
+
+
+def bits_to_target(bits: bytes) -> int:
+    '''Turns bits into a target(large 256-bit integer)'''
+    exp = bits[-1]
+    coef = little_endian_to_int(bits[:-1])
+    return coef * (0x100 ** (exp - 3))
+
+
+def target_to_bits(target: int) -> bytes:
+    '''Turns a target integer back into bits'''
+    b = target.to_bytes(32, 'big')
+    b = b.lstrip(b'\x00')
+    if b[0] < 0x80:
+        exp = len(b)
+        coef = b[:3]
+    else:
+        exp = len(b) + 1
+        coef = b'\x00' + b[:2]
+    return coef[::-1] + bytes([exp])
+
+
+def calculate_new_bits(previous_bits: bytes, time_differential: int) -> bytes:
+    '''Calculates the new bits given a 2016-block time differential and the previous bits'''
+    if time_differential > TWO_WEEKS * 4:
+        time_differential = TWO_WEEKS * 4
+    elif time_differential < TWO_WEEKS // 4:
+        time_differential = TWO_WEEKS // 4
+
+    new_target = bits_to_target(previous_bits) * time_differential // TWO_WEEKS
+    return target_to_bits(new_target)
