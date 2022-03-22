@@ -1,9 +1,9 @@
 # BitCoin use secp256k1 and group order which was fixed.
 # So, We will call BitCoin's ecdsa 's256 ecc'
 
-from bz2 import compress
 import hashlib
 import hmac
+
 from src.ecdsa import ecc
 from src.helper import helper
 

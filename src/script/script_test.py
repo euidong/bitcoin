@@ -1,5 +1,6 @@
 from unittest import TestCase
 from io import BytesIO
+
 from src.script.script import (Script)
 
 

@@ -1,9 +1,9 @@
 # copied from https://github.com/jimmysong/programmingbitcoin/blob/master/code-ch05/op.py
 
 import hashlib
-from typing import List
+
 from src.ecdsa.s256Ecc import S256Point, Signature
-from ..helper.helper import (
+from src.helper.helper import (
     hash160,
     hash256,
 )

@@ -1,5 +1,5 @@
 import hashlib
-from unittest import TestCase, TestSuite, TextTestRunner
+from unittest import TestSuite, TextTestRunner
 from io import BytesIO
 
 SIGHASH_ALL = 1
@@ -77,7 +77,7 @@ def int_to_little_endian(n: int, length: int) -> bytes:
     return int.to_bytes(n, length, 'little')
 
 
-def read_variant(s: BytesIO) -> int:
+def read_varint(s: BytesIO) -> int:
     '''return integer from bytes stream'''
     i = s.read(1)[0]
     if i < 0xfd:
@@ -91,7 +91,7 @@ def read_variant(s: BytesIO) -> int:
     return little_endian_to_int(i)
 
 
-def encode_variant(i: int) -> bytes:
+def encode_varint(i: int) -> bytes:
     '''encodes a integer as a variant(bytes)'''
     if i < 0xfd:  # 2^8 - 3
         return bytes([i])

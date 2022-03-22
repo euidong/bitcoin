@@ -1,12 +1,13 @@
 from unittest import TestCase
 from io import BytesIO
+
 from src.helper.helper import (
-    encode_variant,
+    encode_varint,
     h160_to_p2pkh_address,
     h160_to_p2sh_address,
     little_endian_to_int,
     int_to_little_endian,
-    read_variant,
+    read_varint,
     calculate_new_bits
 )
 
@@ -32,10 +33,10 @@ class HelperTest(TestCase):
         ints = (0x00, 0x01, 0xfe, 0xfff, 0x10000,
                 0x100000000, 0xffffffffffffffff)
         for i in ints:
-            e = encode_variant(i)
-            self.assertEqual(read_variant(BytesIO(e)), i)
+            e = encode_varint(i)
+            self.assertEqual(read_varint(BytesIO(e)), i)
         with self.assertRaises(ValueError):
-            encode_variant(0x10000000000000000)
+            encode_varint(0x10000000000000000)
 
     def test_p2pkh_address(self):
         h160 = bytes.fromhex('74d691da1574e6b3c192ecfb52cc8984ee7b6c56')

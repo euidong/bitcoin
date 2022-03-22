@@ -1,10 +1,9 @@
 from io import BytesIO
-from locale import currency
 from logging import getLogger
 from typing import List, Union
-from xmlrpc.client import boolean
-from helper.helper import (
-    encode_variant, hash160, int_to_little_endian, read_variant, little_endian_to_int)
+
+from src.helper.helper import (
+    encode_varint, hash160, int_to_little_endian, read_varint, little_endian_to_int)
 from src.script.op import (
     OP_CODE_FUNCTIONS, OP_CODE_NAMES, op_equal, op_hash160, op_verify)
 
@@ -53,7 +52,7 @@ class Script:
     @classmethod
     def parse(cls, s: BytesIO) -> 'Script':
         # get the length of the entire field
-        length = read_variant(s)
+        length = read_varint(s)
         # initialize the cmds array
         cmds = []
         # initialize the number of bytes we've read to 0
@@ -120,7 +119,7 @@ class Script:
         # get the raw serialization (no prepended length)
         result = self.raw_serialize()
         total = len(result)
-        return encode_variant(total) + result
+        return encode_varint(total) + result
 
     def evaluate(self, z) -> bool:
         cmds = self.cmds[:]
@@ -172,7 +171,7 @@ class Script:
                     if not op_verify(stack):
                         LOGGER.info('bad p2sh h160')
                         return False
-                    redeem_script = encode_variant(len(cmd)) + cmd
+                    redeem_script = encode_varint(len(cmd)) + cmd
                     stream = BytesIO(redeem_script)
                     cmds.extend(Script.parse(stream).cmds)
         if len(stack) == 0:

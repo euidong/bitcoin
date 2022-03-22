@@ -1,9 +1,10 @@
 from unittest import TestCase
-from helper.helper import decode_base58
-from script.script import p2pkh_script
+from io import BytesIO
+
+from src.helper.helper import decode_base58
+from src.script.script import p2pkh_script
 from src.tx.tx import (TxFetcher, Tx, TxIn, TxOut)
 from src.ecdsa.s256Ecc import (PrivateKey)
-from io import BytesIO
 
 
 class TxTest(TestCase):

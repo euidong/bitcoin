@@ -1,6 +1,7 @@
 
 from random import randint
 from unittest import TestCase
+
 from src.ecdsa.s256Ecc import (Signature, PrivateKey, S256Point, N, G)
 
 

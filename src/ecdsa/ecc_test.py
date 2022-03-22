@@ -1,5 +1,5 @@
-
 from unittest import TestCase
+
 from src.ecdsa.ecc import (FieldElement, Point)
 
 

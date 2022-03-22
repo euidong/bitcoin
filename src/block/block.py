@@ -1,7 +1,7 @@
 from io import BytesIO
 from time import time
 
-from helper.helper import bits_to_target, hash256, int_to_little_endian, little_endian_to_int
+from src.helper.helper import bits_to_target, hash256, int_to_little_endian, little_endian_to_int
 
 
 class Block:
@@ -18,6 +18,16 @@ class Block:
         self.timestamp = timestamp
         self.bits = bits
         self.nonce = nonce
+
+    def __repr__(self) -> str:
+        return 'Block: \n - version: {}\n - prev_block: {}\n - merkle_root: {}\n - timestamp: {}\n - bits: {}\n - nonce: {}'.format(
+            self.version,
+            self.prev_block,
+            self.merkle_root,
+            self.timestamp,
+            self.bits,
+            self.nonce
+        )
 
     @classmethod
     def parse(cls, s: BytesIO) -> 'Block':

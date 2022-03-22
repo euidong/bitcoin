@@ -1,12 +1,11 @@
 from codecs import StreamReader
 from io import BytesIO
 import json
-from multiprocessing.sharedctypes import Value
 from typing import Dict, List
 import requests
-from ecdsa.s256Ecc import B, PrivateKey, Signature
 
-from src.helper.helper import SIGHASH_ALL, encode_variant, hash256, int_to_little_endian, little_endian_to_int, read_variant
+from src.ecdsa.s256Ecc import B, PrivateKey, Signature
+from src.helper.helper import SIGHASH_ALL, encode_varint, hash256, int_to_little_endian, little_endian_to_int, read_varint
 from src.script.script import Script
 
 
@@ -134,13 +133,13 @@ class Tx:
         return a Tx object
         '''
         version = little_endian_to_int(s.read(4))
-        tx_in_len = read_variant(s)
+        tx_in_len = read_varint(s)
         if tx_in_len == 0:
             raise ValueError('Tx need at least one input')
         tx_ins = []
         for _ in range(tx_in_len):
             tx_ins.append(TxIn.parse(s))
-        tx_out_len = read_variant(s)
+        tx_out_len = read_varint(s)
         if tx_out_len == 0:
             raise ValueError('Tx need at least one output')
         tx_outs = []
@@ -152,10 +151,10 @@ class Tx:
     def serialize(self) -> bytes:
         '''Returns the byte serialization of the transaction'''
         result = int_to_little_endian(self.version, 4)
-        result += encode_variant(len(self.tx_ins))
+        result += encode_varint(len(self.tx_ins))
         for tx_in in self.tx_ins:
             result += tx_in.serialize()
-        result += encode_variant(len(self.tx_outs))
+        result += encode_varint(len(self.tx_outs))
         for tx_out in self.tx_outs:
             result += tx_out.serialize()
         result += int_to_little_endian(self.locktime, 4)
@@ -185,7 +184,7 @@ class Tx:
         result = int_to_little_endian(self.version, 4)
 
         # add how many inputs there are using encode_varint
-        result += encode_variant(len(self.tx_ins))
+        result += encode_varint(len(self.tx_ins))
 
         # loop through each input using enumerate, so we have the input index
         # if the input index is the one we're signing
@@ -207,7 +206,7 @@ class Tx:
                 sequence=tx_in.sequence,
             ).serialize()
         # add how many outputs there are using encode_varint
-        result += encode_variant(len(self.tx_outs))
+        result += encode_varint(len(self.tx_outs))
         # add the serialization of each output
         for tx_out in self.tx_outs:
             result += tx_out.serialize()
@@ -228,7 +227,7 @@ class Tx:
         script_pubkey = tx_in.script_pubkey(self.testnet)
         if script_pubkey.is_p2sh_script_pubkey():
             cmd = tx_in.script_sig.cmds[-1]
-            raw_redeem = encode_variant(len(cmd)) + cmd
+            raw_redeem = encode_varint(len(cmd)) + cmd
             redeem_script = Script.parse(BytesIO(raw_redeem))
         else:
             redeem_script = None
