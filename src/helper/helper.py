@@ -1,4 +1,5 @@
 import hashlib
+from typing import List, Union
 from unittest import TestSuite, TextTestRunner
 from io import BytesIO
 
@@ -159,3 +160,49 @@ def calculate_new_bits(previous_bits: bytes, time_differential: int) -> bytes:
 
     new_target = bits_to_target(previous_bits) * time_differential // TWO_WEEKS
     return target_to_bits(new_target)
+
+
+def merkle_parent(hash1: bytes, hash2: bytes) -> bytes:
+    return hash256(hash1 + hash2)
+
+
+def merkle_parent_level(hashes: List[bytes]) -> List[bytes]:
+    hs = hashes[:]
+    if len(hs) % 2:
+        hs.append(hs[-1])
+    parent_level = []
+    for idx in range(0, len(hs), 2):
+        parent_level.append(merkle_parent(hs[idx], hs[idx + 1]))
+    return parent_level
+
+
+def merkle_root(hashes: Union[bytes, List[bytes]]) -> bytes:
+    if type(hashes) == bytes:
+        return hashes
+
+    hs = hashes[:]
+    while len(hs) != 1:
+        hs = merkle_parent_level(hs)
+    return hs[0]
+
+
+def bit_field_to_bytes(bit_field: List[int]) -> bytes:
+    if len(bit_field) % 8 != 0:
+        raise RuntimeError('bit_field length must be 8')
+    bytes_ = b''
+    for idx in range(0, len(bit_field), 8):
+        v = b'\x00'
+        for i in range(8):
+            if bit_field[idx + i]:
+                v |= 1 << i
+        bytes_ += v
+    return bytes_
+
+
+def bytes_to_bit_field(some_bytes: bytes) -> List[int]:
+    bits = []
+    for byte in some_bytes:
+        for _ in range(8):
+            bits.append(byte & 1)
+            byte >>= 1
+    return bits

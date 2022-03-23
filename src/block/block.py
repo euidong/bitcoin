@@ -1,7 +1,8 @@
 from io import BytesIO
 from time import time
+from typing import List
 
-from src.helper.helper import bits_to_target, hash256, int_to_little_endian, little_endian_to_int
+from src.helper.helper import bits_to_target, hash256, int_to_little_endian, little_endian_to_int, merkle_root
 
 
 class Block:
@@ -11,13 +12,15 @@ class Block:
             merkle_root: bytes,
             timestamp: int,
             bits: bytes,
-            nonce: bytes):
+            nonce: bytes,
+            tx_hashes: List[bytes] = None):
         self.version = version
         self.prev_block = prev_block
         self.merkle_root = merkle_root
         self.timestamp = timestamp
         self.bits = bits
         self.nonce = nonce
+        self.tx_hashes = tx_hashes
 
     def __repr__(self) -> str:
         return 'Block: \n - version: {}\n - prev_block: {}\n - merkle_root: {}\n - timestamp: {}\n - bits: {}\n - nonce: {}'.format(
@@ -83,3 +86,6 @@ class Block:
         '''Returns whether this Block satisfies proof of work'''
         proof = int.from_bytes(self.hash(), 'big')
         return proof < self.target()
+
+    def validate_merkle_root(self) -> bool:
+        return self.merkle_root[::-1] == merkle_root([h[::-1] for h in self.tx_hashes])
