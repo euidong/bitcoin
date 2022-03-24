@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from src.block.block import Block
 from src.network.messages import (
-    VersionMessage, GetHeadersMessage, HeadersMessage)
+    FILTERED_BLOCK_DATA_TYPE, GetDataMessage, VersionMessage, GetHeadersMessage, HeadersMessage)
 
 
 class VersionMessageTest(TestCase):
@@ -75,3 +75,29 @@ class HeadersMessageTest(TestCase):
         self.assertEqual(len(headers.blocks), 2)
         for b in headers.blocks:
             self.assertEqual(b.__class__, Block)
+
+
+class GetDataMessageTest(TestCase):
+
+    def test_serialize(self):
+        hex_msg = '020300000030eb2540c41025690160a1014c577061596e32e426b712c7ca00000000000000030000001049847939585b0652fba793661c361223446b6fc41089b8be00000000000000'
+        get_data = GetDataMessage()
+        block1 = bytes.fromhex(
+            '00000000000000cac712b726e4326e596170574c01a16001692510c44025eb30')
+        get_data.add_data(FILTERED_BLOCK_DATA_TYPE, block1)
+        block2 = bytes.fromhex(
+            '00000000000000beb88910c46f6b442312361c6693a7fb52065b583979844910')
+        get_data.add_data(FILTERED_BLOCK_DATA_TYPE, block2)
+        self.assertEqual(get_data.serialize().hex(), hex_msg)
+
+    def test_parse(self):
+        block1 = bytes.fromhex(
+            '00000000000000cac712b726e4326e596170574c01a16001692510c44025eb30')
+        block2 = bytes.fromhex(
+            '00000000000000beb88910c46f6b442312361c6693a7fb52065b583979844910')
+        hex_msg = '020300000030eb2540c41025690160a1014c577061596e32e426b712c7ca00000000000000030000001049847939585b0652fba793661c361223446b6fc41089b8be00000000000000'
+        g_d_m = GetDataMessage.parse(BytesIO(bytes.fromhex(hex_msg)))
+        self.assertEqual(g_d_m.data[0][0], FILTERED_BLOCK_DATA_TYPE)
+        self.assertEqual(g_d_m.data[0][1], block1)
+        self.assertEqual(g_d_m.data[1][0], FILTERED_BLOCK_DATA_TYPE)
+        self.assertEqual(g_d_m.data[1][1], block2)

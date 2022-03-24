@@ -2,6 +2,8 @@ from unittest import TestCase
 from io import BytesIO
 
 from src.helper.helper import (
+    bit_field_to_bytes,
+    bytes_to_bit_field,
     encode_varint,
     h160_to_p2pkh_address,
     h160_to_p2sh_address,
@@ -116,3 +118,10 @@ class HelperTest(TestCase):
         want_hex_hash = 'acbcab8bcc1af95d8d563b77d24c3d19b18f1486383d75a5085c4e86c86beed6'
         want_hash = bytes.fromhex(want_hex_hash)
         self.assertEqual(merkle_root(tx_hashes), want_hash)
+
+    def test_bit_field_to_bytes(self):
+        bit_field = [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0,
+                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]
+        want = '4000600a080000010940'
+        self.assertEqual(bit_field_to_bytes(bit_field).hex(), want)
+        self.assertEqual(bytes_to_bit_field(bytes.fromhex(want)), bit_field)

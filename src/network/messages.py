@@ -3,10 +3,15 @@ from base64 import encode
 from io import BytesIO
 from random import randint
 import time
-from typing import List
+from typing import List, Tuple
 
 from src.block.block import Block
 from src.helper.helper import encode_varint, int_to_little_endian, little_endian_to_int, read_varint
+
+TX_DATA_TYPE = 1
+BLOCK_DATA_TYPE = 2
+FILTERED_BLOCK_DATA_TYPE = 3
+COMPACT_BLOCK_DATA_TYPE = 4
 
 
 class Message:
@@ -14,11 +19,6 @@ class Message:
 
     @abstractclassmethod
     def serialize(self) -> bytes:
-        pass
-
-    @classmethod
-    @abstractclassmethod
-    def parse(cls, s: BytesIO) -> 'Message':
         pass
 
 
@@ -215,4 +215,40 @@ class HeadersMessage(Message):
         for b in self.blocks:
             result += b.serialize()
             result += b'\x00'
+        return result
+
+
+class GenericMessage(Message):
+    def __init__(self, command: bytes, payload: bytes):
+        self.command = command
+        self.payload = payload
+
+    def serialize(self) -> bytes:
+        return self.payload
+
+
+class GetDataMessage(Message):
+    command = b'getdata'
+
+    def __init__(self) -> None:
+        self.data: List[Tuple[int, bytes]] = []
+
+    def add_data(self, data_type: int, identifier: bytes):
+        self.data.append((data_type, identifier))
+
+    @classmethod
+    def parse(cls, s: BytesIO) -> 'GetDataMessage':
+        data_len = read_varint(s)
+        me = cls()
+        for _ in range(data_len):
+            data_type = little_endian_to_int(s.read(4))
+            identifier = s.read(32)[::-1]
+            me.add_data(data_type, identifier)
+        return me
+
+    def serialize(self) -> bytes:
+        result = encode_varint(len(self.data))
+        for (data_type, identifier) in self.data:
+            result += int_to_little_endian(data_type, 4)
+            result += identifier[::-1]
         return result
